@@ -19,9 +19,18 @@ const PUBLIC_RELAYS = [
 ];
 
 // Build peer list: local relay first (if configured), then public relays
+// If LOCAL_RELAY is provided, we prioritize it aggressively
 const RELAY_PEERS = LOCAL_RELAY
-  ? [LOCAL_RELAY, ...PUBLIC_RELAYS]
+  ? [LOCAL_RELAY] // Start with ONLY the local relay to force local sync
   : PUBLIC_RELAYS;
+
+if (LOCAL_RELAY) {
+  console.log('📡 [ACRS] Using Local Relay (Campus Network):', LOCAL_RELAY);
+  // Add public relays as fallbacks after a delay if local fails? 
+  // For now let's stick to what the user asked: "revert it from using the public relay"
+} else {
+  console.log('🌐 [ACRS] No local relay configured, using public fallback network.');
+}
 
 // =============================================================================
 // CONNECTION STATE MANAGEMENT
@@ -58,7 +67,11 @@ function createGunInstance() {
   // Use require inside the function to prevent server-side initialization
   const Gun = require('gun');
 
-  console.log('[GunJS] Connecting to relays:', RELAY_PEERS.slice(0, 3).join(', '), '...');
+  if (LOCAL_RELAY && LOCAL_RELAY.includes('<IP>')) {
+    console.error('⚠️ [ACRS] ERROR: Your .env.local still contains <IP> placeholder! Please replace it with your real IP address.');
+  }
+
+  console.log('[GunJS] Attempting connection to:', RELAY_PEERS);
 
   const gun = Gun({
     peers: RELAY_PEERS,
@@ -66,6 +79,8 @@ function createGunInstance() {
     radisk: false, // Disabled for Next.js compatibility
     axe: false,    // Disable AXE to prevent server-side backgrounds
     multicast: false, // Disable multicast to prevent server-side logs
+    // Add wait time before timing out on a peer
+    retry: 1000,
   });
 
   return gun;

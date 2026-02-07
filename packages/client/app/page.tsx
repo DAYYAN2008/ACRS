@@ -16,6 +16,8 @@ import TrustGraphAbi from '@/src/lib/TrustGraph.json';
 import { TRUST_GRAPH_ADDRESS as contractAddress } from '@/src/lib/contractAddress';
 import { ConnectionStatus } from './components/ConnectionStatus';
 import { RumorCard, RumorVotes } from './components/RumorCard';
+import { InvitePanel } from './components/InvitePanel';
+import { AdminPanel } from './components/AdminPanel';
 import { Wallet, UserPlus, Send, AlertCircle } from 'lucide-react';
 
 type Rumor = { id: string; text: string; time: number };
@@ -62,8 +64,10 @@ export default function Home() {
   const getContract = useCallback(async (needsSigner = false) => {
     if (typeof window === 'undefined' || !window.ethereum) return null;
     const provider = new ethers.BrowserProvider(window.ethereum);
-    // TrustGraphAbi is the full artifact, extract the abi array
-    const abi = (TrustGraphAbi as { abi: ethers.InterfaceAbi }).abi;
+    // TrustGraph.json is the ABI array (written by deploy.ts). Handle both formats.
+    const abi = Array.isArray(TrustGraphAbi)
+      ? (TrustGraphAbi as unknown as ethers.InterfaceAbi)
+      : (TrustGraphAbi as unknown as { abi: ethers.InterfaceAbi }).abi;
     if (needsSigner) {
       const signer = await provider.getSigner();
       return new ethers.Contract(contractAddress, abi, signer);
@@ -373,6 +377,28 @@ export default function Home() {
                 : ' Bootstrap period ended - you need an invite from an existing member.'}
             </p>
           </div>
+        )}
+
+        {/* Admin Panel — only visible to contract owner */}
+        {account && (
+          <AdminPanel
+            account={account}
+            getContract={getContract}
+            onAction={() => {
+              if (account) fetchUserData(account);
+              rumors.forEach(r => fetchRumorVotes(r.text, r.id));
+            }}
+          />
+        )}
+
+        {/* Invite Panel — visible to registered users */}
+        {account && isRegistered && (
+          <InvitePanel
+            account={account}
+            trustScore={trustScore}
+            getContract={getContract}
+            onInviteSuccess={() => fetchUserData(account)}
+          />
         )}
 
         {/* Rumors Feed */}

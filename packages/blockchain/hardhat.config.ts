@@ -1,20 +1,19 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
+import * as dotenv from "dotenv";
 
-// 1. PASTE YOUR ALCHEMY URL HERE (Keep the quotes!)
-// It should look like: "https://eth-sepolia.g.alchemy.com/v2/AbCdEfGhIjK..."
-const ALCHEMY_API_URL = "https://eth-sepolia.g.alchemy.com/v2/B0RmPl6TsU7EOT1qdwjCv";
+dotenv.config();
 
-// 2. PASTE YOUR METAMASK PRIVATE KEY HERE (Keep the quotes!)
-// It should look like: "0x346cd...17181"
-const METAMASK_PRIVATE_KEY = "d8da11f00e2e393478221eec28b33d2addb55efc363da0e0e97988590d91fc70"; 
+// Loaded from .env file — never hardcode secrets in source!
+const ALCHEMY_API_URL = process.env.ALCHEMY_API_URL || "";
+const METAMASK_PRIVATE_KEY = process.env.METAMASK_PRIVATE_KEY || "";
 
 const config: HardhatUserConfig = {
   solidity: "0.8.19",
   networks: {
     sepolia: {
       url: ALCHEMY_API_URL,
-      accounts: [METAMASK_PRIVATE_KEY], 
+      accounts: METAMASK_PRIVATE_KEY ? [METAMASK_PRIVATE_KEY] : [],
     },
   },
 };

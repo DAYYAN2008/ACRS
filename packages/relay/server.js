@@ -35,27 +35,32 @@ function getLocalIPs() {
 
 // Create HTTP server
 const server = http.createServer((req, res) => {
-   // Health check endpoint
-   if (req.url === '/health') {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({
-         status: 'ok',
-         service: 'acrs-relay',
-         timestamp: Date.now()
-      }));
-      return;
-   }
-
-   // CORS headers for browser clients
+   // CORS headers — MUST be set on ALL responses for browser clients
    res.setHeader('Access-Control-Allow-Origin', '*');
-   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+   res.setHeader('Access-Control-Allow-Headers', '*');
 
    if (req.method === 'OPTIONS') {
       res.writeHead(200);
       res.end();
       return;
    }
+
+   // Health check endpoint
+   if (req.url === '/health') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+         status: 'ok',
+         service: 'acrs-relay',
+         peers: 'active',
+         timestamp: Date.now()
+      }));
+      return;
+   }
+
+   // Default response
+   res.writeHead(200, { 'Content-Type': 'text/html' });
+   res.end('<h1>ACRS GunDB Relay — Running</h1>');
 });
 
 // Attach GunJS to the server

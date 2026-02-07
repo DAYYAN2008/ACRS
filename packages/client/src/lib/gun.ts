@@ -4,24 +4,13 @@
 // RELAY CONFIGURATION
 // =============================================================================
 
-// Local relay - set this to your campus relay when running locally
-const LOCAL_RELAY = process.env.NEXT_PUBLIC_LOCAL_RELAY || null;
+// Local relay — this is the ONLY relay used for campus LAN P2P.
+// Set via NEXT_PUBLIC_LOCAL_RELAY in .env.local, or falls back to the hardcoded LAN IP.
+// Public relays are intentionally excluded — they are unreliable and cause sync issues.
+const LOCAL_RELAY = process.env.NEXT_PUBLIC_LOCAL_RELAY || 'http://10.7.48.61:8765/gun';
 
-// Public community relays (fallback when local relay unavailable)
-const PUBLIC_RELAYS = [
-  'https://gun-manhattan.herokuapp.com/gun',
-  'https://gun-us.herokuapp.com/gun',
-  'https://relay.1234.as/gun',
-  'https://gun-matrix.herokuapp.com/gun',
-  'https://gundb-relay-mlccl.ondigitalocean.app/gun',
-  'https://gun-ams1.maddiex.wtf/gun',
-  'https://gun-sjc1.maddiex.wtf/gun',
-];
-
-// Build peer list: local relay first (if configured), then public relays
-const RELAY_PEERS = LOCAL_RELAY
-  ? [LOCAL_RELAY, ...PUBLIC_RELAYS]
-  : PUBLIC_RELAYS;
+// Peer list — only the local campus relay
+const RELAY_PEERS = [LOCAL_RELAY];
 
 // =============================================================================
 // CONNECTION STATE MANAGEMENT
@@ -58,7 +47,7 @@ function createGunInstance() {
   // Use require inside the function to prevent server-side initialization
   const Gun = require('gun');
 
-  console.log('[GunJS] Connecting to relays:', RELAY_PEERS.slice(0, 3).join(', '), '...');
+  console.log('[ACRS] Connecting to local relay:', LOCAL_RELAY);
 
   const gun = Gun({
     peers: RELAY_PEERS,

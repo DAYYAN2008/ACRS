@@ -3,7 +3,7 @@
 declare global {
   interface Window {
     ethereum?: {
-      request: (args: { method: string }) => Promise<string[]>;
+      request: (args: unknown) => Promise<unknown>;
       on?: (event: string, cb: (accounts: string[]) => void) => void;
     };
   }
@@ -13,7 +13,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import gun from '@/src/lib/gun';
 import TrustGraphAbi from '@/src/lib/TrustGraph.json';
-import { TRUST_GRAPH_ADDRESS } from '@/src/lib/contractAddress';
+import { TRUST_GRAPH_ADDRESS as contractAddress } from '@/src/lib/contractAddress';
 
 type Rumor = { id: string; text: string; time: number };
 
@@ -24,18 +24,45 @@ export default function Home() {
   const [trustScore, setTrustScore] = useState<number>(0);
   const [votingRumorId, setVotingRumorId] = useState<string | null>(null);
 
+  const switchToSepolia = async () => {
+    if (typeof window === 'undefined' || !window.ethereum) return;
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0xaa36a7' }],
+      });
+    } catch (err: unknown) {
+      const code = (err as { code?: number })?.code;
+      if (code === 4902) {
+        await window.ethereum!.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: '0xaa36a7',
+            chainName: 'Sepolia Test Network',
+            nativeCurrency: { name: 'Sepolia Ether', symbol: 'SEP', decimals: 18 },
+            rpcUrls: ['https://rpc.sepolia.org'],
+            blockExplorerUrls: ['https://sepolia.etherscan.io'],
+          }],
+        });
+      } else {
+        throw err;
+      }
+    }
+  };
+
   const connectWallet = useCallback(async () => {
     if (typeof window === 'undefined' || !window.ethereum) {
       alert('Please install MetaMask or another Web3 wallet.');
       return;
     }
-    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    await switchToSepolia();
+    const accounts = (await window.ethereum.request({ method: 'eth_requestAccounts' })) as string[];
     const addr = accounts[0] as string;
     setAccount(addr);
 
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
-      const contract = new ethers.Contract(TRUST_GRAPH_ADDRESS, TrustGraphAbi as ethers.InterfaceAbi, provider);
+      const contract = new ethers.Contract(contractAddress, TrustGraphAbi as ethers.InterfaceAbi, provider);
       const score = await contract.trustScore(addr);
       setTrustScore(Number(score));
     } catch {
@@ -88,7 +115,7 @@ export default function Home() {
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      const contract = new ethers.Contract(TRUST_GRAPH_ADDRESS, TrustGraphAbi as ethers.InterfaceAbi, signer);
+      const contract = new ethers.Contract(contractAddress, TrustGraphAbi as ethers.InterfaceAbi, signer);
       await contract.castVote(rumorHash, isTrue);
 
       const score = await contract.trustScore(account);

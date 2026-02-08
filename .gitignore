@@ -6,3 +6,4 @@ artifacts
 cache
 typechain-types
 data/
+config.bat

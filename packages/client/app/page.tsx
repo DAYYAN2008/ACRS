@@ -14,27 +14,16 @@ import { ethers } from 'ethers';
 import gun from '@/src/lib/gun';
 import TrustGraphAbi from '@/src/lib/TrustGraph.json';
 import { TRUST_GRAPH_ADDRESS as contractAddress } from '@/src/lib/contractAddress';
-<<<<<<< HEAD
-import RumorCard from './components/RumorCard';
-import FloatingDock from './components/FloatingDock';
-import DecryptingText from './components/DecryptingText';
-=======
 import { ConnectionStatus } from './components/ConnectionStatus';
 import { RumorCard, RumorVotes } from './components/RumorCard';
 import { InvitePanel } from './components/InvitePanel';
+import FloatingDock from './components/FloatingDock';
+import DecryptingText from './components/DecryptingText';
 import { Wallet, UserPlus, Send, AlertCircle, Clock, ChevronDown, ChevronUp, SkipForward } from 'lucide-react';
->>>>>>> a200b9ea0bf2181050cb2ea0d65c756dbd2691c0
 
 type Rumor = { id: string; text: string; time: number };
 
 export default function Home() {
-<<<<<<< HEAD
-  const [rumors, setRumors] = useState<Rumor[]>([]);
-  const [newRumor, setNewRumor] = useState('');
-  const [account, setAccount] = useState<string | null>(null);
-  const [trustScore, setTrustScore] = useState<number>(0);
-  const [votingRumorId, setVotingRumorId] = useState<string | null>(null);
-=======
   // ── Wallet State ──
   const [account, setAccount] = useState<string | null>(null);
   const [trustScore, setTrustScore] = useState<number>(0);
@@ -50,7 +39,6 @@ export default function Home() {
   const [votingRumorId, setVotingRumorId] = useState<string | null>(null);
   const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState<string | null>(null);
->>>>>>> a200b9ea0bf2181050cb2ea0d65c756dbd2691c0
 
   // ── Epoch State ──
   const [currentEpoch, setCurrentEpoch] = useState(0);
@@ -108,8 +96,6 @@ export default function Home() {
     }
   };
 
-<<<<<<< HEAD
-=======
   // ═══════════════════════════════════════════════════════
   // USER DATA
   // ═══════════════════════════════════════════════════════
@@ -158,29 +144,11 @@ export default function Home() {
   // WALLET CONNECTION
   // ═══════════════════════════════════════════════════════
 
->>>>>>> a200b9ea0bf2181050cb2ea0d65c756dbd2691c0
   const connectWallet = useCallback(async () => {
     if (typeof window === 'undefined' || !window.ethereum) {
       alert('Please install MetaMask or another Web3 wallet.');
       return;
     }
-<<<<<<< HEAD
-    await switchToSepolia();
-    const accounts = (await window.ethereum.request({ method: 'eth_requestAccounts' })) as string[];
-    const addr = accounts[0] as string;
-    setAccount(addr);
-
-    try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const contract = new ethers.Contract(contractAddress, TrustGraphAbi.abi, provider);
-      const score = await contract.trustScore(addr);
-      setTrustScore(Number(score));
-    } catch {
-      setTrustScore(0);
-    }
-  }, []);
-
-=======
     setError(null);
     try {
       await switchToSepolia();
@@ -284,37 +252,29 @@ export default function Home() {
   // P2P SUBSCRIPTION
   // ═══════════════════════════════════════════════════════
 
->>>>>>> a200b9ea0bf2181050cb2ea0d65c756dbd2691c0
   useEffect(() => {
     if (!gun) return;
     gun.get('acrs-channel').map().on((data: { text?: string; time?: number } | null, id: string) => {
       if (data && data.text) {
         setRumors((prev) => {
           if (prev.find((r) => r.id === id)) return prev;
-<<<<<<< HEAD
-          return [{ id, text: data.text ?? '', time: data.time ?? Date.now() }, ...prev];
-=======
           const newRumor = { id, text: data.text ?? '', time: data.time ?? Date.now() };
           fetchRumorVotes(newRumor.text, newRumor.id);
           return [newRumor, ...prev];
->>>>>>> a200b9ea0bf2181050cb2ea0d65c756dbd2691c0
         });
       }
     });
-  }, []);
+  }, [fetchRumorVotes]);
 
-<<<<<<< HEAD
-=======
   // Refresh votes when account changes
   useEffect(() => {
     if (account && rumors.length > 0) {
       rumors.forEach(r => fetchRumorVotes(r.text, r.id));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account]);
 
   // Handle MetaMask account switching
->>>>>>> a200b9ea0bf2181050cb2ea0d65c756dbd2691c0
   useEffect(() => {
     if (typeof window !== 'undefined' && window.ethereum) {
       window.ethereum.on?.('accountsChanged', (accounts: string[]) => {
@@ -329,12 +289,6 @@ export default function Home() {
     }
   }, [connectWallet]);
 
-<<<<<<< HEAD
-  const postRumor = (text: string) => {
-    if (!gun || !text.trim()) return;
-    const rumor = { text, time: Date.now() };
-    gun.get('acrs-channel').set(rumor);
-=======
   // Epoch countdown timer
   useEffect(() => {
     if (epochTimeLeft <= 0) return;
@@ -365,34 +319,10 @@ export default function Home() {
   const postRumor = () => {
     if (!gun || !newRumor.trim()) return;
     gun.get('acrs-channel').set({ text: newRumor, time: Date.now() });
->>>>>>> a200b9ea0bf2181050cb2ea0d65c756dbd2691c0
     setNewRumor('');
   };
 
   const castVote = async (rumorText: string, rumorId: string, isTrue: boolean) => {
-<<<<<<< HEAD
-    if (!account || typeof window === 'undefined' || !window.ethereum) {
-      alert('Connect your wallet first.');
-      return;
-    }
-
-    const rumorHash = ethers.id(rumorText);
-    setVotingRumorId(rumorId);
-
-    try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const contract = new ethers.Contract(contractAddress, TrustGraphAbi.abi, signer);
-      await contract.castVote(rumorHash, isTrue);
-
-      const score = await contract.trustScore(account);
-      setTrustScore(Number(score));
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes('NotRegistered')) alert('You must be invited to vote.');
-      else if (msg.includes('AlreadyVoted')) alert('You already voted on this rumor.');
-      else alert('Vote failed: ' + msg.slice(0, 80));
-=======
     if (!account) { setError('Connect your wallet first.'); return; }
     if (!isRegistered) { setError('You must be registered to vote.'); return; }
 
@@ -412,7 +342,6 @@ export default function Home() {
       else if (msg.includes('AlreadyVoted')) { setError('You already voted on this rumor.'); await fetchRumorVotes(rumorText, rumorId); }
       else if (msg.includes('ZeroTrust')) setError('Your trust score is 0. You cannot vote.');
       else setError('Vote failed: ' + msg.slice(0, 80));
->>>>>>> a200b9ea0bf2181050cb2ea0d65c756dbd2691c0
     } finally {
       setVotingRumorId(null);
     }
@@ -487,89 +416,61 @@ export default function Home() {
   // ═══════════════════════════════════════════════════════
 
   return (
-<<<<<<< HEAD
-    <div className="min-h-screen bg-oled text-text-primary selection:bg-accent-purple/30">
-      <div className="max-w-xl mx-auto px-6 pt-16 pb-32">
-        <header className="mb-12 text-center">
-          <h1 className="text-4xl font-extrabold tracking-tighter mb-2 bg-gradient-to-b from-white to-text-secondary bg-clip-text text-transparent">
-            ACRS
-          </h1>
-          <div className="flex items-center justify-center gap-2 text-xs font-mono text-accent-purple opacity-70 tracking-widest uppercase">
-            <span className="animate-pulse">●</span> Anonymous Campus Rumor System
-          </div>
-        </header>
-
-        <div className="space-y-6">
-          {rumors.length > 0 ? (
-            rumors.map((r) => (
-              <RumorCard
-                key={r.id}
-                rumor={r}
-                onVote={castVote}
-                isVoting={votingRumorId === r.id}
-              />
-            ))
-          ) : (
-            <div className="py-24 text-center">
-              <p className="text-text-secondary font-mono text-sm">
-                <DecryptingText text="Scanning P2P network for rumors..." />
-              </p>
-            </div>
-          )}
-        </div>
-=======
-    <div className="min-h-screen bg-[#0a0a0f] text-cyan-100 font-mono">
-      <div className="max-w-2xl mx-auto px-6 py-8">
+    <div className="min-h-screen bg-oled text-text-primary selection:bg-accent-purple/30 font-mono">
+      <div className="max-w-2xl mx-auto px-6 pt-12 pb-32">
 
         {/* ── Header ── */}
-        <header className="mb-8 pb-6 border-b border-cyan-500/30">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+        <header className="mb-12 border-b border-white/5 pb-8">
+          <div className="flex flex-wrap items-center justify-between gap-6 mb-6">
             <div>
-              <h1 className="text-2xl font-bold tracking-wider text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.4)]">
-                ACRS // Campus Gossip
+              <h1 className="text-4xl font-extrabold tracking-tighter mb-2 bg-gradient-to-b from-white to-text-secondary bg-clip-text text-transparent">
+                ACRS
               </h1>
-              <p className="text-sm text-cyan-200/60 mt-1">P2P Rumor Feed · TrustGraph Verified · No Admin</p>
+              <div className="flex items-center gap-2 text-xs font-mono text-accent-purple opacity-70 tracking-widest uppercase">
+                <span className="animate-pulse">●</span> Campus Rumor Matrix
+              </div>
             </div>
-            <div className="flex items-center gap-3">
+
+            <div className="flex items-center gap-4">
               {account ? (
-                <>
-                  <div className="flex flex-col items-end gap-1">
-                    <span className="px-3 py-1.5 rounded bg-cyan-500/20 text-cyan-300 text-sm border border-cyan-500/40">
-                      Trust: {trustScore}
-                    </span>
-                    <span className="text-xs text-cyan-200/50 truncate max-w-[120px]">{account}</span>
+                <div className="flex flex-col items-end gap-1.5">
+                  <div className="px-4 py-2 rounded-full glass-dark border border-white/10 text-sm font-bold text-accent-purple transition-all hover:border-accent-purple/40">
+                    TRUST: {trustScore}
                   </div>
-                  {!isRegistered && (
-                    <button onClick={registerUser} disabled={isRegistering}
-                      className="flex items-center gap-2 px-4 py-2 rounded bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/50 text-emerald-300 font-medium transition-all disabled:opacity-50">
-                      <UserPlus className="w-4 h-4" />
-                      {isRegistering ? 'Registering...' : `Register (${bootstrapSlotsLeft} slots)`}
-                    </button>
-                  )}
-                </>
+                  <span className="text-[10px] text-text-secondary/60 font-mono tracking-tighter truncate max-w-[140px]">
+                    {account}
+                  </span>
+                </div>
               ) : (
-                <button onClick={connectWallet}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/50 text-cyan-300 font-medium transition-all hover:shadow-[0_0_12px_rgba(34,211,238,0.3)]">
+                <button
+                  onClick={connectWallet}
+                  className="group flex items-center gap-2 px-6 py-3 rounded-xl bg-accent-purple/10 border border-accent-purple/30 text-accent-purple font-bold text-sm tracking-wide transition-all hover:bg-accent-purple/20 hover:scale-105 active:scale-95"
+                >
                   <Wallet className="w-4 h-4" />
-                  Connect Wallet
+                  INITIALIZE_WALLET
                 </button>
               )}
             </div>
           </div>
+
           <div className="flex items-center justify-between">
             <ConnectionStatus />
             {account && (
-              <div className="flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5 text-cyan-500/60" />
-                <span className="text-xs text-cyan-500/60">
-                  Epoch {currentEpoch}
-                  {epochTimeLeft > 0 ? ` · ${formatTime(epochTimeLeft)} left` : ' · Ready to advance'}
-                </span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 text-[11px] text-text-secondary/60 font-mono uppercase tracking-widest">
+                  <Clock className="w-3.5 h-3.5" />
+                  EPOCH {currentEpoch}
+                  <span className="opacity-40">|</span>
+                  {epochTimeLeft > 0 ? `${formatTime(epochTimeLeft)}_UNTIL_SYNC` : 'SYNC_READY'}
+                </div>
                 {canAdvance && (
-                  <button onClick={advanceEpoch} disabled={isAdvancing}
-                    className="flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-300 disabled:opacity-50 transition-colors">
+                  <button
+                    onClick={advanceEpoch}
+                    disabled={isAdvancing}
+                    className="flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 border border-amber-500/30 text-amber-500 hover:bg-amber-500/20 transition-all disabled:opacity-30"
+                  >
                     <SkipForward className="w-3 h-3" />
-                    {isAdvancing ? '...' : 'Advance'}
+                    {isAdvancing ? 'SYNCING...' : 'ADVANCE'}
                   </button>
                 )}
               </div>
@@ -579,121 +480,119 @@ export default function Home() {
 
         {/* ── Error Display ── */}
         {error && (
-          <div className="flex items-center gap-2 mb-6 p-4 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <p className="text-sm">{error}</p>
-            <button onClick={() => setError(null)} className="ml-auto text-rose-400 hover:text-rose-300">×</button>
+          <div className="flex items-center gap-3 mb-8 p-4 rounded-xl bg-rose-500/5 border border-rose-500/20 text-rose-400 animate-in fade-in slide-in-from-top-4">
+            <AlertCircle size={18} className="flex-shrink-0" />
+            <p className="text-xs font-mono">{error}</p>
+            <button onClick={() => setError(null)} className="ml-auto opacity-40 hover:opacity-100 transition-opacity">×</button>
           </div>
         )}
 
-        {/* ── Rumor Input ── */}
-        <div className="flex gap-2 mb-8">
-          <input
-            className="flex-1 bg-[#0d0d14] border border-cyan-500/30 rounded px-4 py-3 text-cyan-100 placeholder-cyan-500/50 focus:outline-none focus:border-cyan-400/60 focus:ring-1 focus:ring-cyan-400/40"
-            value={newRumor} onChange={(e) => setNewRumor(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && postRumor()}
-            placeholder="What's the tea? Broadcast to P2P network..."
-          />
-          <button onClick={postRumor} disabled={!newRumor.trim()}
-            className="flex items-center gap-2 px-5 py-3 rounded bg-cyan-500/30 hover:bg-cyan-500/40 border border-cyan-400/50 text-cyan-200 font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-            <Send className="w-4 h-4" /> Broadcast
-          </button>
+        {/* ── Registration & Invites ── */}
+        <div className="space-y-6 mb-12">
+          {account && !isRegistered && (
+            <div className="p-6 rounded-2xl border border-amber-500/20 bg-amber-500/5 glass-dark">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-amber-400 text-sm font-bold uppercase mb-1">Access Required</h3>
+                  <p className="text-xs text-amber-200/60 leading-relaxed font-mono">
+                    Node {account.slice(0, 6)} is not yet registered on the TrustGraph.
+                    {bootstrapSlotsLeft > 0
+                      ? `${bootstrapSlotsLeft} genesis slots remaining for autonomous entry.`
+                      : 'Bootstrap phase depleted. Encrypted invite required for registration.'}
+                  </p>
+                </div>
+                <button
+                  onClick={registerUser}
+                  disabled={isRegistering || (bootstrapSlotsLeft === 0)}
+                  className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 font-bold text-xs hover:bg-amber-500/30 transition-all disabled:opacity-20"
+                >
+                  <UserPlus size={14} />
+                  {isRegistering ? 'PROCESSING...' : 'REGISTER'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {account && isRegistered && (
+            <InvitePanel
+              account={account}
+              trustScore={trustScore}
+              getContract={getContract}
+              onInviteSuccess={() => fetchUserData(account)}
+            />
+          )}
         </div>
-
-        {/* ── Registration Notice ── */}
-        {account && !isRegistered && (
-          <div className="mb-6 p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-200">
-            <p className="text-sm">
-              You must <strong>register</strong> to vote on rumors.
-              {bootstrapSlotsLeft > 0
-                ? ` ${bootstrapSlotsLeft} bootstrap slots remaining for free registration.`
-                : ' Bootstrap period ended — you need an invite from an existing member.'}
-            </p>
-          </div>
-        )}
-
-        {/* ── Invite Panel ── */}
-        {account && isRegistered && (
-          <InvitePanel account={account} trustScore={trustScore} getContract={getContract} onInviteSuccess={() => fetchUserData(account)} />
-        )}
 
         {/* ── Rumor Feed ── */}
-        <div className="space-y-4">
-          {rumors.map((r) => (
-            <RumorCard
-              key={r.id} id={r.id} text={r.text} time={r.time}
-              votes={rumorVotes[r.id] || null}
-              isConnected={!!account && isRegistered}
-              isVoting={votingRumorId === r.id}
-              onVerify={() => castVote(r.text, r.id, true)}
-              onDispute={() => castVote(r.text, r.id, false)}
-              onResolve={() => resolveRumor(r.text, r.id)}
-              onClaim={() => {
-                const v = rumorVotes[r.id];
-                if (v) claimReward(r.text, r.id, v.epoch);
-              }}
-            />
-          ))}
+        <div className="space-y-6">
+          {rumors.length > 0 ? (
+            rumors.map((r) => (
+              <RumorCard
+                key={r.id}
+                id={r.id}
+                text={r.text}
+                time={r.time}
+                votes={rumorVotes[r.id] || null}
+                isConnected={!!account && isRegistered}
+                isVoting={votingRumorId === r.id}
+                onVerify={() => castVote(r.text, r.id, true)}
+                onDispute={() => castVote(r.text, r.id, false)}
+                onResolve={() => resolveRumor(r.text, r.id)}
+                onClaim={() => {
+                  const v = rumorVotes[r.id];
+                  if (v) claimReward(r.text, r.id, v.epoch);
+                }}
+              />
+            ))
+          ) : (
+            <div className="py-32 text-center">
+              <p className="text-text-secondary font-mono text-sm opacity-50">
+                <DecryptingText text="Scanning P2P relay nodes for encrypted packets..." speed={30} />
+              </p>
+            </div>
+          )}
         </div>
 
-        {rumors.length === 0 && (
-          <div className="text-center py-16">
-            <p className="text-cyan-500/50 mb-2">No rumors yet.</p>
-            <p className="text-cyan-500/30 text-sm">Be the first to broadcast something.</p>
-          </div>
-        )}
-
         {/* ── How It Works ── */}
-        <div className="mt-10 border border-cyan-500/20 rounded-lg overflow-hidden">
-          <button onClick={() => setShowHowItWorks(!showHowItWorks)}
-            className="w-full flex items-center justify-between p-4 text-left text-cyan-400 hover:bg-cyan-500/5 transition-colors">
-            <span className="font-semibold text-sm">How It Works — Edge Cases Covered</span>
-            {showHowItWorks ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        <div className="mt-20 border border-white/5 rounded-2xl overflow-hidden glass-dark">
+          <button
+            onClick={() => setShowHowItWorks(!showHowItWorks)}
+            className="w-full flex items-center justify-between p-5 text-left text-text-secondary hover:bg-white/5 transition-colors"
+          >
+            <span className="font-bold text-xs uppercase tracking-widest">Protocol Documentation</span>
+            {showHowItWorks ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
           {showHowItWorks && (
-            <div className="px-4 pb-4 space-y-3 text-sm text-cyan-200/70">
+            <div className="px-6 pb-6 space-y-4 text-xs text-text-secondary/70 font-mono leading-relaxed">
               <div>
-                <h4 className="font-medium text-cyan-300">1. Bot Accounts (Sybil Resistance)</h4>
-                <p>Each invite costs 5 trust points. Creating bots depletes the inviter&apos;s influence. Quadratic voting means 10 bots with trust 10 have less power than 1 honest user with trust 100.</p>
+                <h4 className="font-bold text-accent-purple mb-1">01_SYBIL_RESISTANCE</h4>
+                <p>Invitations require a 5-point trust stake. Bot farms deplete the inviter's influence. Quadratic weighting makes mass account creation self-defeating.</p>
               </div>
               <div>
-                <h4 className="font-medium text-cyan-300">2. Double Voting (Without Collecting Identities)</h4>
-                <p>Per-address, per-rumor, per-epoch nullifier prevents double votes. Ethereum addresses are pseudonymous — no names, emails, or IDs collected.</p>
+                <h4 className="font-bold text-accent-purple mb-1">02_PSEUDONYMOUS_VOID</h4>
+                <p>Zero identity collection. Nullifiers prevent double-voting without linking packets to physical identities.</p>
               </div>
               <div>
-                <h4 className="font-medium text-cyan-300">3. Popular Lies Shouldn&apos;t Auto-Win</h4>
-                <p>Quadratic voting: weight = √(trust). High-trust veteran voters have more influence than a mob of new accounts. Quality over quantity.</p>
+                <h4 className="font-bold text-accent-purple mb-1">03_QUADRATIC_WEIGHTING</h4>
+                <p>Weight = √(Trust). Quality of participation over quantity of accounts. Veteran nodes hold more sway than the mob.</p>
               </div>
               <div>
-                <h4 className="font-medium text-cyan-300">4. Historical Scores Changing</h4>
-                <p>Epoch isolation: each epoch&apos;s votes are stored independently. Past tallies are frozen and immutable — verified facts from last month can&apos;t change.</p>
-              </div>
-              <div>
-                <h4 className="font-medium text-cyan-300">5. Ghost Rumor Bug</h4>
-                <p>Epoch-scoped storage: votes keyed by (rumorHash, epoch). Deleting a rumor off-chain has zero effect on on-chain data. No cross-contamination.</p>
-              </div>
-              <div>
-                <h4 className="font-medium text-cyan-300">6. No Central Authority</h4>
-                <p>All functions are permissionless — no admin, no owner. Epochs advance by time (anyone can trigger). Trust adjusts via community consensus, not admin decree.</p>
-              </div>
-              <div>
-                <h4 className="font-medium text-cyan-300">7. Mathematical Proof (Sybil Attack Cost)</h4>
-                <p>Creating K fake accounts costs 5K trust. Each fake has weight √10 ≈ 3.16. After 10 consensus rounds of voting wrong, they hit 0 trust and are expelled. Meanwhile honest users grow to max trust. Attack is self-defeating. ∎</p>
-              </div>
-              <div>
-                <h4 className="font-medium text-cyan-300">8. Trust Growth & Decay</h4>
-                <p>After a rumor is resolved by community consensus, voters aligned with majority gain +2 trust, voters against lose -1 trust. Honest participation is rewarded; liars are gradually expelled.</p>
+                <h4 className="font-bold text-accent-purple mb-1">04_EPOCH_ISOLATION</h4>
+                <p>Consensus is scoped by time. Historical tallies are immutable, preventing retroactive truth manipulation.</p>
               </div>
             </div>
           )}
         </div>
 
         {/* ── Footer ── */}
-        <footer className="mt-12 pt-6 border-t border-cyan-500/20 text-center text-xs text-cyan-500/40">
-          <p>ACRS — Anonymous Campus Rumor System</p>
-          <p className="mt-1">Decentralized · Sybil-Resistant · Trust-Weighted · No Admin</p>
+        <footer className="mt-16 pt-8 border-t border-white/5 text-center">
+          <p className="text-[10px] font-mono text-text-secondary/30 uppercase tracking-[0.2em]">
+            ACRS // Anonymous Campus Rumor System
+          </p>
+          <p className="mt-2 text-[8px] font-mono text-text-secondary/20 uppercase tracking-[0.1em]">
+            Permissionless · Trust-Weighted · Fully Decentralized
+          </p>
         </footer>
->>>>>>> a200b9ea0bf2181050cb2ea0d65c756dbd2691c0
       </div>
 
       <FloatingDock
@@ -705,7 +604,7 @@ export default function Home() {
         onInputChange={setNewRumor}
       />
 
-      {/* Grid Overlay for aesthetic */}
+      {/* Grid Overlay */}
       <div className="fixed inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px]" />
     </div>
   );

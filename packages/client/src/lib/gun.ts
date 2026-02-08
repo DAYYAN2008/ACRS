@@ -1,188 +1,74 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import Gun from 'gun';
 
-// =============================================================================
-// RELAY CONFIGURATION
-// =============================================================================
-
-// Local relay - set this to your campus relay when running locally
-const LOCAL_RELAY = process.env.NEXT_PUBLIC_LOCAL_RELAY || null;
-
-// Public community relays (fallback when local relay unavailable)
-const PUBLIC_RELAYS = [
-  'https://gun-manhattan.herokuapp.com/gun',
-  'https://gun-us.herokuapp.com/gun',
-  'https://relay.1234.as/gun',
-  'https://gun-matrix.herokuapp.com/gun',
-  'https://gundb-relay-mlccl.ondigitalocean.app/gun',
-  'https://gun-ams1.maddiex.wtf/gun',
-  'https://gun-sjc1.maddiex.wtf/gun',
+// We need to connect to public "Relay Nodes" so users can find each other.
+// These are free, community-run servers that just bounce signals.
+const peers = [
+  'https://3f1fb3bf-99e3-415b-83ae-8821402ae4dd-00-cau89310wj6w.sisko.replit.dev/gun',
+  'https://gun-manhattan.herokuapp.com/gun', // The main community relay
+  'https://relay.1234.as/gun',              // Backup relay
+  'https://gun-us.herokuapp.com/gun'        // Backup relay
 ];
 
-// Build peer list: local relay first (if configured), then public relays
-// If LOCAL_RELAY is provided, we prioritize it aggressively
-const RELAY_PEERS = LOCAL_RELAY
-  ? [LOCAL_RELAY] // Start with ONLY the local relay to force local sync
-  : PUBLIC_RELAYS;
-
-if (LOCAL_RELAY) {
-  console.log('📡 [ACRS] Using Local Relay (Campus Network):', LOCAL_RELAY);
-  // Add public relays as fallbacks after a delay if local fails? 
-  // For now let's stick to what the user asked: "revert it from using the public relay"
-} else {
-  console.log('🌐 [ACRS] No local relay configured, using public fallback network.');
+const localRelay = process.env.NEXT_PUBLIC_LOCAL_RELAY;
+if (localRelay) {
+  peers.unshift(localRelay);
 }
 
-// =============================================================================
-// CONNECTION STATE MANAGEMENT
-// =============================================================================
+const gun = Gun({
+  peers: peers
+});
 
-export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
+
+export type ConnectionStatus = 'connected' | 'disconnected' | 'connecting' | 'error';
 
 export interface GunConnectionState {
   status: ConnectionStatus;
   peerCount: number;
   lastSync: number | null;
   error: string | null;
-  activeRelay: string | null;
 }
 
-type ConnectionCallback = (state: GunConnectionState) => void;
-const connectionCallbacks: Set<ConnectionCallback> = new Set();
-
-let connectionState: GunConnectionState = {
-  status: 'connecting',
+const state: GunConnectionState = {
+  status: 'disconnected',
   peerCount: 0,
   lastSync: null,
-  error: null,
-  activeRelay: null,
+  error: null
 };
 
-// =============================================================================
-// GUN INSTANCE
-// =============================================================================
+const listeners = new Set<(state: GunConnectionState) => void>();
 
-function createGunInstance() {
-  if (typeof window === 'undefined') return null;
+export const getConnectionState = (): GunConnectionState => state;
 
-  // Use require inside the function to prevent server-side initialization
-  const Gun = require('gun');
+export const subscribeToConnection = (cb: (state: GunConnectionState) => void) => {
+  listeners.add(cb);
+  cb(state);
+  return () => { listeners.delete(cb); };
+};
 
-  if (LOCAL_RELAY && LOCAL_RELAY.includes('<IP>')) {
-    console.error('⚠️ [ACRS] ERROR: Your .env.local still contains <IP> placeholder! Please replace it with your real IP address.');
-  }
 
-  console.log('[GunJS] Attempting connection to:', RELAY_PEERS);
+const notify = () => {
+  listeners.forEach(cb => cb({ ...state }));
+};
 
-  const gun = Gun({
-    peers: RELAY_PEERS,
-    localStorage: true,
-    radisk: false, // Disabled for Next.js compatibility
-    axe: false,    // Disable AXE to prevent server-side backgrounds
-    multicast: false, // Disable multicast to prevent server-side logs
-    // Add wait time before timing out on a peer
-    retry: 1000,
-  });
+// @ts-ignore - Gun types can be tricky
+gun.on('hi', () => {
+  state.peerCount++;
+  state.status = 'connected';
+  state.lastSync = Date.now();
+  notify();
+});
 
-  return gun;
-}
+// @ts-ignore
+gun.on('bye', () => {
+  state.peerCount = Math.max(0, state.peerCount - 1);
+  if (state.peerCount === 0) state.status = 'disconnected';
+  notify();
+});
 
-const gun: any = createGunInstance();
-
-// =============================================================================
-// CONNECTION MONITORING
-// =============================================================================
-
-let connectionCheckInterval: ReturnType<typeof setInterval> | null = null;
-
-function startConnectionMonitoring() {
-  if (connectionCheckInterval) return;
-
-  updateConnectionState({ status: 'connecting' });
-
-  connectionCheckInterval = setInterval(() => {
-    checkConnectionHealth();
-  }, 5000);
-
-  setTimeout(checkConnectionHealth, 1000);
-}
-
-function checkConnectionHealth() {
-  if (!gun) return;
-
-  const testKey = `__health_${Date.now()}`;
-  const testValue = { ping: Date.now() };
-
-  gun.get('acrs-health').get(testKey).put(testValue as any, (ack: any) => {
-    if (ack && ack.err) {
-      updateConnectionState({
-        status: 'error',
-        error: ack.err,
-      });
-    } else {
-      updateConnectionState({
-        status: 'connected',
-        lastSync: Date.now(),
-        error: null,
-      });
-    }
-  });
-
-  estimatePeerCount();
-}
-
-function estimatePeerCount() {
-  if (!gun) return;
-
-  let responsesReceived = 0;
-
-  gun.get('acrs-channel').map().once(() => {
-    responsesReceived++;
-  });
-
-  setTimeout(() => {
-    const estimatedPeers = responsesReceived > 0 ? Math.min(responsesReceived, RELAY_PEERS.length) : 0;
-    updateConnectionState({ peerCount: estimatedPeers });
-  }, 2000);
-}
-
-function updateConnectionState(updates: Partial<GunConnectionState>) {
-  connectionState = { ...connectionState, ...updates };
-  notifyConnectionListeners();
-}
-
-function notifyConnectionListeners() {
-  connectionCallbacks.forEach(callback => callback(connectionState));
-}
-
-// =============================================================================
-// PUBLIC API
-// =============================================================================
-
-export function subscribeToConnection(callback: ConnectionCallback): () => void {
-  connectionCallbacks.add(callback);
-  callback(connectionState);
-
-  return () => {
-    connectionCallbacks.delete(callback);
-  };
-}
-
-export function getConnectionState(): GunConnectionState {
-  return { ...connectionState };
-}
-
-export function reconnect() {
-  updateConnectionState({ status: 'connecting', error: null });
-  checkConnectionHealth();
-}
-
-export function getConfiguredRelays(): string[] {
-  return [...RELAY_PEERS];
-}
-
-// Start monitoring when module loads (browser only)
-if (typeof window !== 'undefined') {
-  startConnectionMonitoring();
-}
+export const reconnect = () => {
+  state.status = 'connecting';
+  notify();
+  // Gun internals handle actual reconnection, we just update local state
+};
 
 export default gun;

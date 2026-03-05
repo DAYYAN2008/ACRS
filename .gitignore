@@ -1,9 +1,9 @@
 node_modules
-.env
-.env.local
 .next
 artifacts
 cache
 typechain-types
 data/
 config.bat
+temp_auto_push.bat
+temp_interactive_push.bat

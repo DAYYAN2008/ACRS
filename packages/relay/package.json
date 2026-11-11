@@ -4,8 +4,8 @@
   "description": "Local GunJS relay for ACRS - run on any device on your WiFi network",
   "main": "server.js",
   "scripts": {
-    "start": "node api.js && node server.js",
-    "start:background": "node api.js && node server.js &"
+    "start": "node server.js",
+    "start:background": "node server.js &"
   },
   "dependencies": {
     "gun": "^0.2020.1241"
